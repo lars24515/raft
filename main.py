@@ -98,8 +98,8 @@ class WaterTile(pygame.sprite.Sprite):
       
       self.image = game.AssetManager.waterSprites[int(self.current_sprite)]
 
-      '''self.rect.y += self.velocity
-      self.rect.x -= self.velocity'''
+      self.rect.y += self.velocity
+      self.rect.x -= self.velocity
 
       if self.rect.collidepoint(mousePosition):
          if not self in selected:
@@ -110,20 +110,58 @@ class WaterTile(pygame.sprite.Sprite):
 
 class Shark:
 
-   def __init__(self, x, y):
+   def __init__(self):
       self.image = game.AssetManager.nonSpawnable["shark"]
       self.rect = self.image.get_rect()
-      self.rect.x, self.rect.y = x, y
+      self.rect.x = random.randint(30, game.SCREEN_SIZE.x - 30)
+      self.rect.y = game.SCREEN_SIZE.y + self.image.get_height()
       self.speed = 2.5
-      self.damage = 0.001
+      self.damage = 0.2
       self.health = 100
       self.spawned = False
       self.angle = 0
+
+   def collidingWithPlayer(self):
+    # Calculate the center of the player's rectangle
+    player_center_x = player.rect.centerx
+    player_center_y = player.rect.centery
+
+    # Check if the shark's rectangle collides with the player's center
+    return self.rect.collidepoint(player_center_x, player_center_y)
    
-   def spawn(self):
-      x = random.randint(30, game.SCREEN_SIZE.x - 30)
-      y = game.SCREEN_SIZE.y + self.image.get_height()
-      self.rect.x, self.rect.y = x, y
+   def attack(self):
+      hud.stats.health -= self.damage
+      #game.sharkInstance = None # remove instance from screen, which means you have to make an new shark instance for each time player goes in water.
+
+   def update(self):
+      dx2 = player.position.x - self.rect.x
+      dy2 = player.position.y - self.rect.y
+      angle2 = math.atan2(dy2, dx2)
+      angle_degrees2 = -(math.degrees(angle2) + 90)  # Use the negative and add 90 degrees
+
+      # Ensure the angle is within the range [0, 360)
+      angle_degrees2 %= 360
+
+      self.angle = angle_degrees2
+
+      # Rotate the image around its center
+      rotated_image, new_rect = game.rotate_image(self.image, angle_degrees2, self.rect.center)
+      self.rect = new_rect
+
+      # Calculate the components of the movement vector
+      dy = self.speed * math.cos(math.radians(angle_degrees2))
+      dx = self.speed * math.sin(math.radians(angle_degrees2))
+
+      if not self.collidingWithPlayer():
+        self.rect.x -= dx
+        self.rect.y -= dy
+
+        self.rect.x = max(0, min(self.rect.x, game.SCREEN_SIZE.x - self.rect.width))
+        self.rect.y = max(0, min(self.rect.y, game.SCREEN_SIZE.y - self.rect.height))
+      else:
+         self.attack()
+
+      game.render(rotated_image, self.rect.topleft)
 
 class Game:
 
@@ -213,6 +251,7 @@ class Game:
       self.activeObjects = []
       self.spawnObjectChanceRange = 200
       self.spawnableObjectSize = (45, 45)
+      self.sharkInstance = None
 
    def click(self, rect):
       keys = pygame.mouse.get_pressed()
@@ -716,6 +755,7 @@ class Player:
 
             game.render(image, (handXCenter, handYCenter))
 
+   # -- player class --
 
    def __init__(self, x, y):
       self.position = pygame.Vector2(x, y)
@@ -736,7 +776,7 @@ class Player:
       self.size = pygame.Vector2(self.image.get_width(), self.image.get_height())
       self.holding_item = False
       self.holding_item_img = None
-      self.in_water = False
+      self.inWater = False
       self.hand = self.Hand(self, radius=32, color=(255, 0, 0), thickness=5)
       self.hoveringTilePosition = 0
 
@@ -761,7 +801,32 @@ class Player:
    def keyup(self):
       self.isAnimating = False
       self.current_sprite = 0
-   
+
+   def biomeHandler(self):
+      color = game.screen.get_at((self.rect.centerx, self.rect.centery))
+      '''r, g, b = color[0], color[1], color[2]
+      ansi_color = f"\x1b[38;2;{r};{g};{b}m"
+      print(f"{ansi_color}{color}{colorama.Style.RESET_ALL}")'''
+      if color[:3] == (77, 166, 255):
+         if not self.inWater:
+               self.inWater = True
+
+               # spawn shark
+               shark = Shark()
+               game.sharkInstance = shark
+
+         # update the shark if it still is in the water
+         if game.sharkInstance:
+               game.sharkInstance.update()
+
+      elif color[:3] == (215, 145, 92):
+         if self.inWater:
+               self.inWater = False
+
+               # if shark exists, remove it before it hurts the player
+               if game.sharkInstance:
+                  del game.sharkInstance
+
    def update(self, cursor_position):
       player.hand.angle = player.angle
       player.hand.update(self.holding_item_img)
@@ -782,6 +847,8 @@ class Player:
          self.position.y += delta_y
 
       self.rect.x, self.rect.y = self.position
+
+      self.biomeHandler()
 
       self.calculate_velocity(cursor_position)
 
@@ -804,7 +871,6 @@ game = Game()
 player = Player(game.SCREEN_SIZE.x // 2, game.SCREEN_SIZE.y // 2)
 hud = HUD()
 game.loadLevel()
-shark = Shark(200, 200)
 
 selectivePlankTile = PlankTile(0, 0)
 selectivePlankTile.image = game.AssetManager.plankSprites["selectivePlank"]
@@ -828,10 +894,7 @@ while running:
          if event.key == pygame.K_o:
             mousePosition = pygame.Vector2(pygame.mouse.get_pos())
             player.position = mousePosition
-         if event.key == pygame.K_l:
-            shark.spawn()
-            shark.spawned = True
-         
+
          # some hotbar stuff idk
 
          game.handleKeyDown(event)
@@ -884,36 +947,6 @@ while running:
 
    player.update(mousePosition)
    game.render(player.image, player.position)
-
-   dx2 = player.position.x - shark.rect.x
-   dy2 = player.position.y - shark.rect.y
-   angle2 = math.atan2(dy2, dx2)
-   angle_degrees2 = -(math.degrees(angle2) + 90)  # Use the negative and add 90 degrees
-
-   # Ensure the angle is within the range [0, 360)
-   angle_degrees2 %= 360
-
-   shark.angle = angle_degrees2
-   print(shark.angle)
-
-   # Rotate the image around its center
-   rotated_image, new_rect = game.rotate_image(shark.image, angle_degrees2, shark.rect.center)
-   shark.rect = new_rect
-
-   shark.speed
-
-   # Calculate the components of the movement vector
-   dy = shark.speed * math.cos(math.radians(angle_degrees2))
-   dx = shark.speed * math.sin(math.radians(angle_degrees2))
-
-   # Update the shark's position
-   shark.rect.x -= dx
-   shark.rect.y -= dy
-
-   shark.rect.x = max(0, min(shark.rect.x, game.SCREEN_SIZE.x - shark.rect.width))
-   shark.rect.y = max(0, min(shark.rect.y, game.SCREEN_SIZE.y - shark.rect.height))
-
-   game.render(rotated_image, shark.rect.topleft)
 
    hud.handleUI()
 
