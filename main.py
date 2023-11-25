@@ -98,8 +98,8 @@ class WaterTile(pygame.sprite.Sprite):
       
       self.image = game.AssetManager.waterSprites[int(self.current_sprite)]
 
-      self.rect.y += self.velocity
-      self.rect.x -= self.velocity
+      '''self.rect.y += self.velocity
+      self.rect.x -= self.velocity'''
 
       if self.rect.collidepoint(mousePosition):
          if not self in selected:
@@ -116,7 +116,7 @@ class Shark:
       self.rect.x = random.randint(30, game.SCREEN_SIZE.x - 30)
       self.rect.y = game.SCREEN_SIZE.y + self.image.get_height()
       self.speed = 2.5
-      self.damage = 0.2
+      self.damage = 0.5
       self.health = 100
       self.spawned = False
       self.angle = 0
@@ -180,9 +180,39 @@ class Game:
             self.inventoryMode = False
             self.inventoryImage = pygame.transform.scale(self.image, (self.image.get_width() * 0.5, self.image.get_height() * 0.5))
             self.regularImage = self.image # FIKS AT DEN IKKE ER TRANSFORMEMD
+            self.stack = 1
+            self.font = pygame.font.Font(None, 36)
+         
+         def drawStack(self):
+            if self.inventoryMode:
+               sprite_to_draw = self
+
+               # Extract the rect attribute from the sprite
+               rect_to_draw = sprite_to_draw.rect
+
+               # Set the thickness of the outline (width) to a value greater than 0
+               outline_thickness = 20  # Adjust this value according to your preference
+
+               # Draw the outline of the rect on the screen
+               pygame.draw.rect(game.screen, (255, 0, 0), rect_to_draw, outline_thickness)
+
+               # Create a font object
+               font = pygame.font.Font(None, 36)  # You can replace None with a specific font file path
+
+               # Create a text surface
+               text_surface = font.render("Tile", True, (255, 255, 255))  # Replace (255, 255, 255) with the text color
+
+               # Get the center position for the text
+               text_rect = text_surface.get_rect(center=rect_to_draw.center)
+
+               # Blit the text surface onto the screen
+               game.screen.blit(text_surface, text_rect)
+
          
          def update(self):
             self.rect.x, self.rect.y = self.position
+            if self.inventoryMode:
+               self.drawStack()
 
          def toggleInventoryMode(self):
             self.inventoryMode = not self.inventoryMode
@@ -200,6 +230,7 @@ class Game:
          self.plankSprites = self.getImages("./Tiles/Plank", transform=False, list=False)
          # tiles
          self.water_tiles = pygame.sprite.Group()
+         self.underTiles = pygame.sprite.Group()
          self.plank_tiles = pygame.sprite.Group()
          # idk
          self.HUDObjects = self.getImages("./HUD", transform=False)
@@ -330,12 +361,12 @@ class Game:
       print(f"[{Fore.LIGHTCYAN_EX}{formatted_time}{Fore.RESET}]{Fore.LIGHTWHITE_EX}[{color}{sign}{Fore.LIGHTWHITE_EX}]{color}{attr}{message}")
 
    def loadLevel(self):
-      fac = 0
+      fac = -3
 
       # water
 
-      for y in range(20):
-         for x in range(20):
+      for y in range(28):
+         for x in range(30):
             tile = WaterTile(x+fac, y+fac)
             p = game.toScreenCoords(tile.rect.x, tile.rect.y)
             tile.rect.x = p.x
@@ -861,6 +892,17 @@ class Player:
       else:
          self.image = self.down_sprites[int(self.current_sprite)]
 
+def campfireCallback():
+   print("i am a campfire")
+
+placableTypes = {
+   "campfire": campfireCallback
+}
+
+class Placable(pygame.sprite.Sprite):
+
+   pass
+
 print("--------------------------------------------------------------------------------------")
 print("--------------------------------------------------------------------------------------")
 print("--------------------------------------------------------------------------------------")
@@ -894,6 +936,8 @@ while running:
          if event.key == pygame.K_o:
             mousePosition = pygame.Vector2(pygame.mouse.get_pos())
             player.position = mousePosition
+         if event.key == pygame.K_l:
+            print(player.holding_item_img.type) # lag at når man trykker på campfire, så har campfire en liste over clickable items og hvsi den er i den så ja
 
          # some hotbar stuff idk
 
@@ -920,7 +964,9 @@ while running:
    mousePosition = pygame.Vector2(pygame.mouse.get_pos())
 
    game.AssetManager.water_tiles.update(mousePosition, selectivePlankTile)
+   game.AssetManager.underTiles.update(mousePosition, selectivePlankTile)
    game.screen.fill("sky blue")
+   game.AssetManager.underTiles.draw(game.screen)
    game.AssetManager.water_tiles.draw(game.screen)
 
    game.updateObjects()
