@@ -891,17 +891,7 @@ class Player:
          self.image = self.right_sprites[int(self.current_sprite)]
       else:
          self.image = self.down_sprites[int(self.current_sprite)]
-
-def campfireCallback():
-   print("i am a campfire")
-
-placableTypes = {
-   "campfire": campfireCallback
-}
-
-class Placable(pygame.sprite.Sprite):
-
-   pass
+      
 
 print("--------------------------------------------------------------------------------------")
 print("--------------------------------------------------------------------------------------")
@@ -918,6 +908,45 @@ selectivePlankTile = PlankTile(0, 0)
 selectivePlankTile.image = game.AssetManager.plankSprites["selectivePlank"]
 selectivePlankTile.image.set_alpha(99)
 selected = []
+
+def campfireCallback():
+   print("i am a campfire")
+
+placableCallbacks = {
+   "campfire": campfireCallback # when selecting something in hotbar, if it is in this dict then set its selecting to true
+}
+
+placableTypes = game.AssetManager.getImages("./Tiles/Placables")
+game.log(None, f"{placableTypes}", "info", "Debugger~Placable")
+
+class Placable(pygame.sprite.Sprite):
+
+   def __init__(self, x, y, type):
+      super().__init__()
+      self.image = placableTypes[type]
+      self.placingImage = self.image.set_alpha(99) # known issue, will set main images alpha too
+      self.callback = placableCallbacks[type]
+      self.rect = self.image.get_rect()
+      self.rect.x, self.rect.y = x, y
+      self.type = type
+      self.placed = False
+      self.selecting = False
+   
+   def place(self):
+      self.placed = True
+
+   def update(self):
+      closestTile = game.find_closest_tile(selected=selected, mousePosition=mousePosition)
+      if not self.placed and closestTile and self.selecting: # hovering
+         self.rect.topleft = closestTile.rect.topleft
+      else:
+         pass
+
+      if self.selecting and not self.placed:
+         game.render(self.placingImage, (self.rect.topleft)) # idk bro
+      elif not self.selecting and self.placed:
+         game.render(self.image, (self.rect.topleft))
+
 
 running = True
 while running:
