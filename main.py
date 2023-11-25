@@ -973,7 +973,7 @@ while running:
             hud.hotbar.add_item(obj)
          if event.key == pygame.K_o:
             mousePosition = pygame.Vector2(pygame.mouse.get_pos())
-            player.position = mousePosition
+            player.position = mousePosition 
 
          # some hotbar stuff idk
 
