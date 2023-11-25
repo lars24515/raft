@@ -114,12 +114,13 @@ class Shark:
       self.image = game.AssetManager.nonSpawnable["shark"]
       self.rect = self.image.get_rect()
       self.rect.x = random.randint(30, game.SCREEN_SIZE.x - 30)
-      self.rect.y = game.SCREEN_SIZE.y + self.image.get_height()
+      self.rect.y = game.SCREEN_SIZE.y + self.image.get_height() * 4
       self.speed = 2.5
       self.damage = 0.5
       self.health = 100
       self.spawned = False
       self.angle = 0
+      game.log(self, f"Created shark at {self.rect.topleft}", "info", "SharkManager")
 
    def collidingWithPlayer(self):
     # Calculate the center of the player's rectangle
@@ -155,13 +156,17 @@ class Shark:
       if not self.collidingWithPlayer():
         self.rect.x -= dx
         self.rect.y -= dy
-
-        self.rect.x = max(0, min(self.rect.x, game.SCREEN_SIZE.x - self.rect.width))
-        self.rect.y = max(0, min(self.rect.y, game.SCREEN_SIZE.y - self.rect.height))
       else:
          self.attack()
 
       game.render(rotated_image, self.rect.topleft)
+
+def campfireCallback():
+   print("i am a campfire")
+
+placableCallbacks = {
+   "campfire": campfireCallback # when selecting something in hotbar, if it is in this dict then set its selecting to true
+}
 
 class Game:
 
@@ -232,6 +237,7 @@ class Game:
          self.water_tiles = pygame.sprite.Group()
          self.underTiles = pygame.sprite.Group()
          self.plank_tiles = pygame.sprite.Group()
+         self.placableTiles = pygame.sprite.Group()
          # idk
          self.HUDObjects = self.getImages("./HUD", transform=False)
          Game.log(self, self.HUDObjects, "info", "HUDObjects")
@@ -426,6 +432,15 @@ class Game:
          self.log(self, f"Equipped item {hud.hotbar.items[key][0].type} at index {input}", "info", "InputHandler")
          # Integrate sound system when that is made here
          player.pickUp(item)
+
+         # if item is a placable, show it with transparency
+         tm = item[0]
+         if tm.type in placableTypes:
+            newPlacable = Placable(tm.rect.x, tm.rect.y, tm.type)
+            if not newPlacable in game.AssetManager.placableTiles:
+               game.AssetManager.placableTiles.add(newPlacable)
+               game.log(self, f"Placed {tm.type}", "info", "InputHandler")
+
       except IndexError:
          self.log(self, f"Index {input} is out of range", "warn", "InputHandler")
 
@@ -857,6 +872,7 @@ class Player:
                # if shark exists, remove it before it hurts the player
                if game.sharkInstance:
                   del game.sharkInstance
+                  game.log(self, "Shark removed", "info", "SharkManager")
 
    def update(self, cursor_position):
       player.hand.angle = player.angle
@@ -909,13 +925,6 @@ selectivePlankTile.image = game.AssetManager.plankSprites["selectivePlank"]
 selectivePlankTile.image.set_alpha(99)
 selected = []
 
-def campfireCallback():
-   print("i am a campfire")
-
-placableCallbacks = {
-   "campfire": campfireCallback # when selecting something in hotbar, if it is in this dict then set its selecting to true
-}
-
 placableTypes = game.AssetManager.getImages("./Tiles/Placables")
 game.log(None, f"{placableTypes}", "info", "Debugger~Placable")
 
@@ -965,8 +974,6 @@ while running:
          if event.key == pygame.K_o:
             mousePosition = pygame.Vector2(pygame.mouse.get_pos())
             player.position = mousePosition
-         if event.key == pygame.K_l:
-            print(player.holding_item_img.type) # lag at når man trykker på campfire, så har campfire en liste over clickable items og hvsi den er i den så ja
 
          # some hotbar stuff idk
 
@@ -1001,6 +1008,7 @@ while running:
    game.updateObjects()
 
    game.AssetManager.plank_tiles.draw(game.screen)
+   game.AssetManager.placableTiles.draw(game.screen)
 
    mouseButtons = pygame.mouse.get_pressed()
 
