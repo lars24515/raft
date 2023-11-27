@@ -113,8 +113,8 @@ class Shark:
    def __init__(self):
       self.image = game.AssetManager.nonSpawnable["shark"]
       self.rect = self.image.get_rect()
-      self.rect.x = random.randint(30, game.SCREEN_SIZE.x - 30)
-      self.rect.y = game.SCREEN_SIZE.y + self.image.get_height() * 4
+      self.rect.x = random.randint(30, int(game.SCREEN_SIZE.x) - 30)
+      self.rect.y = game.SCREEN_SIZE.y + self.image.get_height() *2
       self.speed = 2.5
       self.damage = 0.5
       self.health = 100
