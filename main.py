@@ -972,8 +972,8 @@ while running:
             obj = random.choice(game.activeObjects)
             hud.hotbar.add_item(obj)
          if event.key == pygame.K_o:
-            mousePosition = pygame.Vector2(pygame.mouse.get_pos())
-            player.position = mousePosition 
+            print(game.AssetManager.placableTiles.sprites())
+
 
          # some hotbar stuff idk
 
