@@ -427,6 +427,13 @@ class Game:
          self.log(self, f"Unable to access index {input}; hotbar is empty", "warn", "InputHandler")
          return
       try:
+
+         if player.hand.item is not None:
+            player.holding_item_img = None
+            self.log(self, f"Unequipped item {player.hand.item.type}", "info", "InputHandler")
+            player.hand.item = None
+            return
+         
          key = input - 1
          item = hud.hotbar.items[key]
          self.log(self, f"Equipped item {hud.hotbar.items[key][0].type} at index {input}", "info", "InputHandler")
@@ -569,6 +576,9 @@ class HUD:
                "wood": 2,
                "rope": 2,
                "cloth": 3,
+            },
+            "rope": {
+               "leaf": 2,
             },
          }
 
