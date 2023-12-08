@@ -123,11 +123,8 @@ class Shark:
       game.log(self, f"Created shark at {self.rect.topleft}", "info", "SharkManager")
 
    def collidingWithPlayer(self):
-    # Calculate the center of the player's rectangle
     player_center_x = player.rect.centerx
     player_center_y = player.rect.centery
-
-    # Check if the shark's rectangle collides with the player's center
     return self.rect.collidepoint(player_center_x, player_center_y)
    
    def attack(self):
@@ -138,18 +135,14 @@ class Shark:
       dx2 = player.position.x - self.rect.x
       dy2 = player.position.y - self.rect.y
       angle2 = math.atan2(dy2, dx2)
-      angle_degrees2 = -(math.degrees(angle2) + 90)  # Use the negative and add 90 degrees
-
-      # Ensure the angle is within the range [0, 360)
+      angle_degrees2 = -(math.degrees(angle2) + 90) 
       angle_degrees2 %= 360
 
       self.angle = angle_degrees2
 
-      # Rotate the image around its center
       rotated_image, new_rect = game.rotate_image(self.image, angle_degrees2, self.rect.center)
       self.rect = new_rect
 
-      # Calculate the components of the movement vector
       dy = self.speed * math.cos(math.radians(angle_degrees2))
       dx = self.speed * math.sin(math.radians(angle_degrees2))
 
@@ -166,6 +159,15 @@ def campfireCallback():
 
 placableCallbacks = {
    "campfire": campfireCallback # when selecting something in hotbar, if it is in this dict then set its selecting to true
+}
+
+def plasticCallback(self):
+   hud.stats.thirst += 20
+   if hud.stats.thirst > 100:
+      hud.stats.thirst = 100
+
+objectCallbacks = {
+   "plastic": plasticCallback,
 }
 
 class Game:
@@ -286,7 +288,7 @@ class Game:
       self.tiles = []
       self.AssetManager = self.assetManager()
       self.activeObjects = []
-      self.spawnObjectChanceRange = 200
+      self.spawnObjectChanceRange = 50
       self.spawnableObjectSize = (45, 45)
       self.sharkInstance = None
 
@@ -453,11 +455,20 @@ class Game:
 
    def handleKeyDown(self, event):
 
+      print(event.key)
+
       key = event.key - pygame.K_0
       if 1 <= key <= 9:
          self.processKey(key)
          return
       # some other binds
+   
+   def handleMouseButtons(buttons):
+      if buttons[0]: # mouse button 1
+         if not player.holding_item:
+            return
+
+         # finn callback i callback map objectcallbacks
       
    def handleKeyUp(self, event):
       pass
@@ -983,7 +994,6 @@ while running:
             hud.hotbar.add_item(obj)
          if event.key == pygame.K_o:
             print(game.AssetManager.placableTiles.sprites())
-
 
          # some hotbar stuff idk
 
